@@ -1,7 +1,6 @@
 # lambda/index.py
 import json
 import os
-import urllib.request
 import boto3
 import re  # 正規表現モジュールをインポート
 from botocore.exceptions import ClientError
@@ -72,21 +71,26 @@ def lambda_handler(event, context):
         
         # invoke_model用のリクエストペイロード
         request_payload = {
-            "prompt": bedrock_messages,
+            "messages": bedrock_messages,
+            "inferenceConfig": {
+                "maxTokens": 512,
+                "stopSequences": [],
+                "temperature": 0.7,
+                "topP": 0.9
+            }
         }
         
         print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
         
         # invoke_model APIを呼び出し
-        url = "https://07ed-35-185-30-91.ngrok-free.app/generate"
-        headers = {
-            'Content-Type': 'application/json',
-        }
-        req = urllib.request.Request(url, json.dumps(request_payload).encode(), headers)
-        with urllib.request.urlopen(req) as res:
-                response_body = res.read()
+        response = bedrock_client.invoke_model(
+            modelId=MODEL_ID,
+            body=json.dumps(request_payload),
+            contentType="application/json"
+        )
         
         # レスポンスを解析
+        response_body = json.loads(response['body'].read())
         print("Bedrock response:", json.dumps(response_body, default=str))
         
         # 応答の検証
